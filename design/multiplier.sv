@@ -1,64 +1,71 @@
 `timescale 1ns / 1ps
 
-module multiplier #(
-	// 0: lfsr, 1: ld, 2: deterministic (to be made)
-	parameter gen_type = 0,
-	parameter bsl = 255,
-	parameter reg_width = $clog2(bsl)
-)(
-	input clk, rst,
-	input		[reg_width-1:0] a,
-	input		[reg_width-1:0] b,
-	output reg	[reg_width-1:0] x = 0,
-	output	 	[reg_width-1:0] lfsr1_dbg,
-	output	 	[reg_width-1:0] lfsr2_dbg,
-	output				done
+module multiplier (
+	input	clk, rst,
+	input	[31:0]	A, B,
+	output	[31:0] 	P,
+	output	done
 );
+	// bit widths for each
+	localparam integer sign_bit = 1;
+	localparam integer exponent = 8;
+	localparam integer mantissa = 23;
 
 	reg en = 1'b1;
 	assign done = ~en;
 
-	reg[reg_width-1:0] counter = {reg_width{1'b0}};
+	wire done_A_h, done_B_h, done_A_m, done_B_m;
+	wire done_all = ((done_A_h)&(done_B_h));//&((done_A_m)&(done_B_m));
+	wire [254:0] A_h_sbs, B_h_sbs, prod_hi;//, A_m_sbs, B_m_sbs, prod_mid, prod_hi_mid, prod_mid_hi;
 
-	reg [reg_width-1:0] lfsr1 = 8'd1;
-	reg [reg_width-1:0] lfsr2 = 8'd244;
+	reg [7:0] accumulator = 8'b0;
+	reg [7:0] counter = 8'b0;
 
-	reg a_sc = 1'b0, b_sc =1'b0;
-	wire x_sc;
+	assign P[31] = A[31]^B[31];
+	assign P[30:23] = (A[30:23]+1)+(B[30:23]+1)-1-127;
+	assign P[22:16] = {accumulator[6:0]};
+	assign P[15:0] = 16'b0;
 
-	assign x_sc = a_sc & b_sc;
-	assign lfsr1_dbg = lfsr1;
-	assign lfsr2_dbg = lfsr2;
-
+	wire [7:0] sng_in_a, sng_in_b;
+	assign sng_in_a[7] = 1'b1;
+	assign sng_in_b[7] = 1'b1;
+	genvar i;
 	generate
-		if(gen_type == 0) begin
-			always @(posedge clk or negedge rst) begin
-				if(!rst) begin
-					counter <= 0;
-					en <= 1'b1;
-				end
-				else begin
-					if(counter == 255) begin
-						en <= 1'b0;
-					end
+		for(i=0; i<7; i=i+1) begin
+			assign sng_in_a[i] = A[16+i];
+			assign sng_in_b[i] = B[16+i];
+		end
+	endgenerate
 
-					if(en) begin
-						counter <= counter+1;
-						lfsr1 <= {lfsr1[6:0], lfsr1[7]^lfsr1[3]^lfsr1[2]^lfsr1[1]};
-						lfsr2 <= {lfsr2[6:0], lfsr2[7]^lfsr2[4]^lfsr2[2]^lfsr2[0]};
-						a_sc <= (a>lfsr1)?1:0;
-						b_sc <= (b>lfsr2)?1:0;
-						x <= x+x_sc;
-					end
-				end
+	// perform 16-bit SC multiplication with 8-bit multipliers
+	sng sng_A_h(.rst(rst), .clk(clk), .a(sng_in_a), .a_sbs(A_h_sbs), .done(done_A_h));
+	// sng sng_A_m(.rst(rst), .clk(clk), .a(A[15:08]), .a_sbs(A_m_sbs), .done(done_A_m));
+
+	sng #(.lfsr_seed(1)) sng_B_h(.rst(rst), .clk(clk), .a(sng_in_b), .a_sbs(B_h_sbs), .done(done_B_h));
+	// sng sng_B_m(.rst(rst), .clk(clk), .a(B[15:08]), .a_sbs(B_m_sbs), .done(done_B_m));
+
+	assign prod_hi = A_h_sbs & B_h_sbs;
+	// assign prod_mid    = A_m_sbs & B_m_sbs;
+	// assign prod_hi_mid = A_h_sbs & B_m_sbs;
+	// assign prod_mid_hi = A_m_sbs & B_h_sbs;
+
+
+	always @(posedge clk) begin
+		if(~rst) begin
+			en <= 1'b1;
+			accumulator <= 8'b0;
+			counter <= 8'b0;
+		end
+		if(en && done_all) begin
+			if(counter==8'b1111_1111) begin
+				en <= 1'b0;
+				$display("%b", sng_in_a);
+			end
+			else begin
+				// $display("%d", counter);
+				accumulator <= accumulator + prod_hi[counter];
+				counter <= counter+1;
 			end
 		end
-		// else if(gen_type == 1) begin
-			
-		// end
-		// else begin
-			
-		// end
-	endgenerate
+	end
 endmodule
-
