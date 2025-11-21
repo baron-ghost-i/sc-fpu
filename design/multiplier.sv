@@ -20,10 +20,13 @@ module multiplier (
 
 	reg [7:0] accumulator = 8'b0;
 	reg [7:0] counter = 8'b0;
+	wire [7:0] first_one;
 
 	assign P[31] = A[31]^B[31];
-	assign P[30:23] = (A[30:23]+1)+(B[30:23]+1)-1-127;
-	assign P[22:16] = {accumulator[6:0]};
+	// multiplication happens in the form of 0.1a * 0.1b, with resultant's first 1 being either at MSB or MSB-1. We thus decrement from exponent accordingly
+	assign P[30:23] = (A[30:23]+1)+(B[30:23]+1)-127-{6'b0, (~accumulator[7])&accumulator[6], accumulator[7]};
+	
+	assign P[22:16] = accumulator[7]?accumulator[6:0]:{accumulator[5:0], 1'b0};
 	assign P[15:0] = 16'b0;
 
 	wire [7:0] sng_in_a, sng_in_b;
@@ -59,7 +62,7 @@ module multiplier (
 		if(en && done_all) begin
 			if(counter==8'b1111_1111) begin
 				en <= 1'b0;
-				$display("%b", sng_in_a);
+				$display("%d %d %d", accumulator, sng_in_a, sng_in_b);
 			end
 			else begin
 				// $display("%d", counter);
