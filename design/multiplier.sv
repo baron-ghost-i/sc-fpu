@@ -28,17 +28,6 @@ module multiplier (
 	assign P[22:16] = accumulator[7]?accumulator[6:0]:{accumulator[5:0], 1'b0};
 	assign P[15:0] = 16'b0;
 
-	wire [7:0] sng_in_a, sng_in_b;
-	assign sng_in_a[7] = 1'b1;
-	assign sng_in_b[7] = 1'b1;
-	genvar i;
-	generate
-		for(i=0; i<7; i=i+1) begin
-			assign sng_in_a[i] = A[16+i];
-			assign sng_in_b[i] = B[16+i];
-		end
-	endgenerate
-
 	// perform 16-bit SC multiplication with 8-bit multipliers
 	sng sng_A_h(.rst(rst), .clk(clk), .a({1'b1, A[22:16]}), .a_sbs(A_h_sbs), .done(done_A_h));
 	// sng sng_A_m(.rst(rst), .clk(clk), .a(A[15:08]), .a_sbs(A_m_sbs), .done(done_A_m));
@@ -60,7 +49,7 @@ module multiplier (
 		if(en && done_all) begin
 			if(counter==8'b1111_1111) begin
 				en <= 1'b0;
-				$display("%d %d %d", accumulator, sng_in_a, sng_in_b);
+				$display("%d %d %d", accumulator, {1'b1, A[22:16]}, {1'b1, B[22:16]});
 			end
 			else begin
 				// $display("%d", counter);
