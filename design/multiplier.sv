@@ -20,7 +20,6 @@ module multiplier (
 
 	reg [7:0] accumulator = 8'b0;
 	reg [7:0] counter = 8'b0;
-	wire [7:0] first_one;
 
 	assign P[31] = A[31]^B[31];
 	// multiplication happens in the form of 0.1a * 0.1b, with resultant's first 1 being either at MSB or MSB-1. We thus decrement from exponent accordingly
