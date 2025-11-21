@@ -18,8 +18,8 @@ module multiplier_tb();
 		shortrealtobits = {sign, exp, frac};
 	endfunction
 
-	reg [31:0] a = shortrealtobits(256.01); //32'b0_10000001_10100000000000000000000;
-	reg [31:0] b = shortrealtobits(16.01);
+	reg [31:0] a = shortrealtobits(1024.111); //32'b0_10000001_10100000000000000000000;
+	reg [31:0] b = shortrealtobits(1024.221);
 	wire [31:0] x;
 	reg clk = 1'b1;
 	reg rst = 1'b1;

@@ -18,11 +18,11 @@ module sng #(
 	reg [reg_width-1:0] counter = {reg_width{1'b0}};
 	reg [reg_width-1:0] lfsr = lfsr_seed;
 	genvar i;
-	// generate
-	// 	for(i=0; i<reg_width; i=i+1) begin
-	// 		assign rev_cnt[reg_width-i-1] = counter[i];
-	// 	end
-	// endgenerate
+	generate
+		for(i=0; i<reg_width; i=i+1) begin
+			assign rev_cnt[reg_width-i-1] = counter[i];
+		end
+	endgenerate
 
 	generate
 		if(gen_type==0) begin
@@ -30,8 +30,7 @@ module sng #(
 				if(~rst) begin
 					en <= 1'b1;
 					counter <= {reg_width{1'b0}};
-				end
-				
+				end	
 				
 				if(en) begin
 					if(counter == bsl) begin

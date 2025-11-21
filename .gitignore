@@ -1,3 +1,5 @@
 *.exe
 *.bat
 output/
+*_backup.sv
+*_old.sv
